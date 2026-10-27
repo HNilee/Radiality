@@ -18,10 +18,23 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({ updateInfo, onDismiss 
 
   const handleUpdateClick = async () => {
     setIsOpeningTerminal(true)
-    if (window.electronAPI?.runTerminalUpdate) {
-      await window.electronAPI.runTerminalUpdate()
-    } else if (updateInfo.downloadUrl && window.electronAPI?.openExternalUrl) {
-      window.electronAPI.openExternalUrl(updateInfo.downloadUrl)
+    try {
+      if (window.electronAPI?.runTerminalUpdate) {
+        const res = await window.electronAPI.runTerminalUpdate()
+        if (res && res.success === false) {
+          console.error('Update launcher error:', res.error)
+          setIsOpeningTerminal(false)
+          if (updateInfo.downloadUrl && window.electronAPI?.openExternalUrl) {
+            window.electronAPI.openExternalUrl(updateInfo.downloadUrl)
+          }
+        }
+      } else if (updateInfo.downloadUrl && window.electronAPI?.openExternalUrl) {
+        await window.electronAPI.openExternalUrl(updateInfo.downloadUrl)
+        setIsOpeningTerminal(false)
+      }
+    } catch (e) {
+      console.error(e)
+      setIsOpeningTerminal(false)
     }
   }
 

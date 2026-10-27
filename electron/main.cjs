@@ -718,9 +718,9 @@ ipcMain.on('close-app', () => {
 // AUTO-UPDATE & MANDATORY UPDATE SYSTEM
 // ==========================================
 const GITHUB_REPO = 'HNilee/Radiality'
-let CURRENT_VERSION = '1.0.9'
+let CURRENT_VERSION = '1.0.10'
 try {
-  CURRENT_VERSION = require('../package.json').version || '1.0.7'
+  CURRENT_VERSION = require('../package.json').version || '1.0.10'
 } catch (e) {}
 
 function parseSemver(v) {
@@ -810,13 +810,17 @@ ipcMain.handle('open-external-url', async (_, url) => {
 
 ipcMain.handle('run-terminal-update', async () => {
   try {
-    if (isWin) {
-      // Spawn PowerShell in a new visible window running npx radiality@latest
-      spawn('cmd.exe', ['/c', 'start', 'powershell', '-NoExit', '-Command', 'Write-Host "Launching Radiality Updater..." -ForegroundColor Cyan; npx radiality@latest'], {
+    const isWindows = process.platform === 'win32'
+    const isMacOS = process.platform === 'darwin'
+
+    if (isWindows) {
+      // Launch a new, visible PowerShell window running npx radiality@latest
+      const psCommand = "Start-Process powershell.exe -ArgumentList '-NoExit', '-Command', 'Write-Host `\"Launching Radiality Updater...`\" -ForegroundColor Cyan; npx radiality@latest'"
+      spawn('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', psCommand], {
         detached: true,
         stdio: 'ignore'
       }).unref()
-    } else if (isMac) {
+    } else if (isMacOS) {
       // Spawn macOS Terminal.app running npx radiality@latest
       const script = 'tell application "Terminal" to do script "npx radiality@latest"'
       spawn('osascript', ['-e', script, '-e', 'tell application "Terminal" to activate'], {
@@ -825,11 +829,11 @@ ipcMain.handle('run-terminal-update', async () => {
       }).unref()
     }
 
-    // Gracefully quit this instance after 1.2s to unlock files for replacement
+    // Gracefully quit this instance after 1.5s to unlock files for replacement
     setTimeout(() => {
       app.isQuitting = true
       app.quit()
-    }, 1200)
+    }, 1500)
 
     return { success: true }
   } catch (err) {

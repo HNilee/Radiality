@@ -1,8 +1,8 @@
 {
-  "latestVersion": "1.0.9",
-  "minRequiredVersion": "1.0.9",
+  "latestVersion": "1.0.10",
+  "minRequiredVersion": "1.0.10",
   "mandatory": true,
-  "title": "Radiality v1.0.9 Update",
-  "releaseNotes": "Radiality v1.0.9: Fixed isWin variable scope for one-click terminal auto-update launcher.",
+  "title": "Radiality v1.0.10 Update",
+  "releaseNotes": "Radiality v1.0.10: Fixed terminal window launcher execution via native Start-Process PowerShell and UI update feedback.",
   "downloadUrl": "https://github.com/HNilee/Radiality"
 }
