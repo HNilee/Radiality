@@ -1,8 +1,8 @@
 {
-  "latestVersion": "1.0.7",
-  "minRequiredVersion": "1.0.7",
+  "latestVersion": "1.0.8",
+  "minRequiredVersion": "1.0.8",
   "mandatory": true,
-  "title": "Radiality v1.0.7 Update",
-  "releaseNotes": "Radiality v1.0.7: Resolved Windows temporary file handle lock on download & direct spawn installer execution.",
+  "title": "Radiality v1.0.8 Update",
+  "releaseNotes": "Radiality v1.0.8: Auto-terminate running instances prior to extraction, fix path normalization, and ensure reliable in-place upgrades.",
   "downloadUrl": "https://github.com/HNilee/Radiality"
 }

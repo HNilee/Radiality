@@ -717,7 +717,10 @@ ipcMain.on('close-app', () => {
 // AUTO-UPDATE & MANDATORY UPDATE SYSTEM
 // ==========================================
 const GITHUB_REPO = 'HNilee/Radiality'
-const CURRENT_VERSION = '1.0.0'
+let CURRENT_VERSION = '1.0.7'
+try {
+  CURRENT_VERSION = require('../package.json').version || '1.0.7'
+} catch (e) {}
 
 function parseSemver(v) {
   if (!v) return [0, 0, 0]

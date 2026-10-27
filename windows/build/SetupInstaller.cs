@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
@@ -599,6 +599,15 @@ namespace RadialityInstaller
             installWorker.DoWork += (s, e) => {
                 try
                 {
+                    try
+                    {
+                        foreach (Process p in Process.GetProcessesByName("Radiality"))
+                        {
+                            try { p.Kill(); p.WaitForExit(2000); } catch { }
+                        }
+                    }
+                    catch { }
+
                     Log("Creating destination directory: " + targetDirectory);
                     if (!Directory.Exists(targetDirectory))
                     {
@@ -623,7 +632,8 @@ namespace RadialityInstaller
                                 current++;
                                 int pct = (int)((float)current / totalEntries * 100);
 
-                                string destPath = Path.Combine(targetDirectory, entry.FullName);
+                                string rel = entry.FullName.Replace('/', Path.DirectorySeparatorChar);
+                                string destPath = Path.Combine(targetDirectory, rel);
                                 if (string.IsNullOrEmpty(entry.Name))
                                 {
                                     Directory.CreateDirectory(destPath);
@@ -826,6 +836,15 @@ namespace RadialityInstaller
         {
             try
             {
+                try
+                {
+                    foreach (Process p in Process.GetProcessesByName("Radiality"))
+                    {
+                        try { p.Kill(); p.WaitForExit(2000); } catch { }
+                    }
+                }
+                catch { }
+
                 if (!Directory.Exists(targetDir))
                 {
                     Directory.CreateDirectory(targetDir);
@@ -834,15 +853,21 @@ namespace RadialityInstaller
                 Assembly assembly = Assembly.GetExecutingAssembly();
                 using (Stream stream = assembly.GetManifestResourceStream("AppPayload"))
                 {
-                    if (stream == null) return;
+                    if (stream == null)
+                    {
+                        Environment.Exit(1);
+                        return;
+                    }
+
                     using (ZipArchive archive = new ZipArchive(stream, ZipArchiveMode.Read))
                     {
                         foreach (ZipArchiveEntry entry in archive.Entries)
                         {
-                            string destPath = Path.Combine(targetDir, entry.FullName);
+                            string rel = entry.FullName.Replace('/', Path.DirectorySeparatorChar);
+                            string destPath = Path.Combine(targetDir, rel);
                             if (string.IsNullOrEmpty(entry.Name))
                             {
-                                Directory.CreateDirectory(destPath);
+                                if (!Directory.Exists(destPath)) Directory.CreateDirectory(destPath);
                             }
                             else
                             {
@@ -905,6 +930,7 @@ namespace RadialityInstaller
             catch (Exception ex)
             {
                 Console.WriteLine("Silent install error: " + ex.Message);
+                Environment.Exit(1);
             }
         }
 

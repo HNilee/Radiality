@@ -253,6 +253,11 @@ async function main() {
       }
     }
 
+    // Terminate existing running instance to prevent file-locking
+    try {
+      execSync('taskkill /f /im Radiality.exe /t 2>nul || true', { stdio: 'ignore' })
+    } catch {}
+
     console.log(`Extracting and configuring Radiality into: ${targetDir}...`)
     try {
       const res = spawnSync(setupExe, ['/silent', `/dir=${targetDir}`, '/nodesktop'], {
