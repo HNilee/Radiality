@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
@@ -777,11 +777,148 @@ namespace RadialityInstaller
         }
 
         [STAThread]
-        public static void Main()
+        public static void Main(string[] args)
         {
+            string targetDir = null;
+            bool silent = false;
+            bool createDesktop = true;
+            bool launch = false;
+
+            if (args != null && args.Length > 0)
+            {
+                foreach (string arg in args)
+                {
+                    if (arg.Equals("/silent", StringComparison.OrdinalIgnoreCase) || arg.Equals("-s", StringComparison.OrdinalIgnoreCase))
+                    {
+                        silent = true;
+                    }
+                    else if (arg.StartsWith("/dir=", StringComparison.OrdinalIgnoreCase))
+                    {
+                        targetDir = arg.Substring(5).Trim('"');
+                    }
+                    else if (arg.Equals("/nodesktop", StringComparison.OrdinalIgnoreCase))
+                    {
+                        createDesktop = false;
+                    }
+                    else if (arg.Equals("/launch", StringComparison.OrdinalIgnoreCase))
+                    {
+                        launch = true;
+                    }
+                }
+            }
+
+            if (silent)
+            {
+                if (string.IsNullOrEmpty(targetDir))
+                {
+                    targetDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Radiality");
+                }
+                RunSilentInstall(targetDir, createDesktop, launch);
+                return;
+            }
+
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
             Application.Run(new SetupForm());
+        }
+
+        private static void RunSilentInstall(string targetDir, bool createDesktop, bool launch)
+        {
+            try
+            {
+                if (!Directory.Exists(targetDir))
+                {
+                    Directory.CreateDirectory(targetDir);
+                }
+
+                Assembly assembly = Assembly.GetExecutingAssembly();
+                using (Stream stream = assembly.GetManifestResourceStream("AppPayload"))
+                {
+                    if (stream == null) return;
+                    using (ZipArchive archive = new ZipArchive(stream, ZipArchiveMode.Read))
+                    {
+                        foreach (ZipArchiveEntry entry in archive.Entries)
+                        {
+                            string destPath = Path.Combine(targetDir, entry.FullName);
+                            if (string.IsNullOrEmpty(entry.Name))
+                            {
+                                Directory.CreateDirectory(destPath);
+                            }
+                            else
+                            {
+                                string dir = Path.GetDirectoryName(destPath);
+                                if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+                                entry.ExtractToFile(destPath, true);
+                            }
+                        }
+                    }
+                }
+
+                string exePath = Path.Combine(targetDir, "Radiality.exe");
+                string iconPath = Path.Combine(targetDir, "public", "icon.ico");
+                if (!File.Exists(iconPath)) iconPath = exePath;
+
+                if (createDesktop)
+                {
+                    try
+                    {
+                        string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+                        CreateShortcutStatic(Path.Combine(desktopPath, "Radiality.lnk"), exePath, targetDir, iconPath, "Radiality - Radial Menu Toolbar");
+                    }
+                    catch { }
+                }
+
+                try
+                {
+                    string startMenu = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Programs), "Radiality");
+                    if (!Directory.Exists(startMenu)) Directory.CreateDirectory(startMenu);
+                    CreateShortcutStatic(Path.Combine(startMenu, "Radiality.lnk"), exePath, targetDir, iconPath, "Radiality - Radial Menu Toolbar");
+                }
+                catch { }
+
+                try
+                {
+                    using (var key = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Uninstall\Radiality"))
+                    {
+                        if (key != null)
+                        {
+                            key.SetValue("DisplayName", "Radiality");
+                            key.SetValue("DisplayVersion", "1.0.0");
+                            key.SetValue("Publisher", "Radiality Team");
+                            key.SetValue("DisplayIcon", exePath);
+                            key.SetValue("InstallLocation", targetDir);
+                            string uninstallerPath = Path.Combine(targetDir, "Radiality-Uninstall.exe");
+                            if (File.Exists(uninstallerPath))
+                            {
+                                key.SetValue("UninstallString", "\"" + uninstallerPath + "\"");
+                            }
+                        }
+                    }
+                }
+                catch { }
+
+                if (launch && File.Exists(exePath))
+                {
+                    Process.Start(new ProcessStartInfo { FileName = exePath, WorkingDirectory = targetDir });
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Silent install error: " + ex.Message);
+            }
+        }
+
+        private static void CreateShortcutStatic(string shortcutPath, string targetPath, string workingDir, string iconPath, string desc)
+        {
+            Type shellType = Type.GetTypeFromProgID("WScript.Shell");
+            if (shellType == null) return;
+            dynamic shell = Activator.CreateInstance(shellType);
+            dynamic shortcut = shell.CreateShortcut(shortcutPath);
+            shortcut.TargetPath = targetPath;
+            shortcut.WorkingDirectory = workingDir;
+            if (File.Exists(iconPath)) shortcut.IconLocation = iconPath;
+            shortcut.Description = desc;
+            shortcut.Save();
         }
     }
 }

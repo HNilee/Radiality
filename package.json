@@ -1,14 +1,16 @@
 {
   "name": "radiality",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "Radiality - Elegant, Customizable Radial Menu Toolbar for Windows & macOS",
   "main": "electron/main.cjs",
   "repository": {
     "type": "git",
-    "url": "https://github.com/HNilee/Radiality.git"
+    "url": "git+https://github.com/HNilee/Radiality.git"
   },
   "homepage": "https://github.com/HNilee/Radiality",
-  "bin": "./bin/cli.js",
+  "bin": {
+    "radiality": "bin/cli.js"
+  },
   "author": "Antigravity",
   "scripts": {
     "dev": "vite",

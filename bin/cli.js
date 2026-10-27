@@ -41,6 +41,25 @@ function renderProgressBar(current, total, width = 30) {
   return `[${bar}] ${Math.round(pct * 100)}%`
 }
 
+async function downloadFileWithProgress(url, destPath) {
+  const res = await fetch(url, { headers: { 'User-Agent': 'Radiality-CLI' } })
+  if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`)
+  const total = parseInt(res.headers.get('content-length') || '0', 10)
+  const fileStream = fs.createWriteStream(destPath)
+  let downloaded = 0
+  for await (const chunk of res.body) {
+    downloaded += chunk.length
+    fileStream.write(chunk)
+    if (total > 0) {
+      process.stdout.write(`\rDownloading package: ${renderProgressBar(downloaded, total)} ${(downloaded / 1048576).toFixed(1)}MB / ${(total / 1048576).toFixed(1)}MB`)
+    } else {
+      process.stdout.write(`\rDownloading package: ${(downloaded / 1048576).toFixed(1)}MB`)
+    }
+  }
+  fileStream.end()
+  process.stdout.write('\n')
+}
+
 function copyRecursiveSync(src, dest, onFile) {
   const exists = fs.existsSync(src)
   const stats = exists && fs.statSync(src)
@@ -188,63 +207,58 @@ async function main() {
     }
   }
 
-  // STEP 3: INSTALLATION EXTRACTION
+  // STEP 3: INSTALLATION
   console.log('\n--- STEP 3 OF 3: INSTALLING RADIALITY ---')
   console.log(`Destination: ${targetDir}\n`)
 
   const rootDir = path.resolve(__dirname, '..')
-  let sourceAppDir = path.join(rootDir, 'release', 'win-unpacked')
-  if (isMac) {
-    const macDir = path.join(rootDir, 'release', 'mac', 'Radiality.app')
-    if (fs.existsSync(macDir)) {
-      sourceAppDir = macDir
-    }
-  }
 
-  if (!fs.existsSync(sourceAppDir)) {
-    console.log('Building application package for installation...')
-    try {
-      execSync('npm run build', { cwd: rootDir, stdio: 'inherit' })
-      if (isWin) {
-        execSync('npx electron-builder --win dir', { cwd: rootDir, stdio: 'inherit' })
-      } else if (isMac) {
-        execSync('npx electron-builder --mac dir', { cwd: rootDir, stdio: 'inherit' })
+  if (isWin) {
+    let setupExe = [
+      path.join(rootDir, 'windows', 'Radiality-Setup.exe'),
+      path.join(process.cwd(), 'windows', 'Radiality-Setup.exe'),
+      path.join(process.cwd(), 'Radiality-Setup.exe')
+    ].find((p) => fs.existsSync(p))
+
+    if (!setupExe) {
+      const tempExe = path.join(os.tmpdir(), 'Radiality-Setup.exe')
+      const dlUrl = 'https://github.com/HNilee/Radiality/raw/main/windows/Radiality-Setup.exe'
+      console.log('Fetching standalone pre-built Radiality package from GitHub...')
+      try {
+        await downloadFileWithProgress(dlUrl, tempExe)
+        setupExe = tempExe
+      } catch (dlErr) {
+        console.error(`Download failed: ${dlErr.message}`)
+        rl.close()
+        process.exit(1)
       }
-    } catch (buildErr) {
-      console.error(`Build failed: ${buildErr.message}`)
+    }
+
+    console.log(`Extracting and configuring Radiality into: ${targetDir}...`)
+    try {
+      execSync(`"${setupExe}" /silent /dir="${targetDir}"`, { stdio: 'inherit' })
+      console.log('✓ Radiality files extracted and configured successfully.')
+    } catch (installErr) {
+      console.error(`Installation failed: ${installErr.message}`)
+      if (targetDir.toLowerCase().includes('program files')) {
+        console.log('\n[!] Tip: Installing to "C:\\Program Files" requires Administrator privileges.')
+        console.log('    Please restart your terminal/cmd as Administrator, or choose a user path.\n')
+      }
       rl.close()
       process.exit(1)
     }
-  }
-
-  if (!fs.existsSync(sourceAppDir)) {
-    console.error(`Error: Source package not found at ${sourceAppDir}`)
-    rl.close()
-    process.exit(1)
-  }
-
-  const totalFiles = countFiles(sourceAppDir)
-  let copiedFiles = 0
-
-  console.log(`Extracting ${totalFiles} components to ${targetDir}...`)
-
-  try {
-    copyRecursiveSync(sourceAppDir, targetDir, (filePath) => {
-      copiedFiles++
-      const rel = path.relative(targetDir, filePath)
-      if (copiedFiles % 5 === 0 || copiedFiles === totalFiles) {
-        process.stdout.write(`\r${renderProgressBar(copiedFiles, totalFiles)} Extracting: ${rel.slice(0, 40).padEnd(40)}`)
+  } else if (isMac) {
+    let sourceAppDir = path.join(rootDir, 'release', 'mac', 'Radiality.app')
+    if (fs.existsSync(sourceAppDir)) {
+      if (fs.existsSync(targetDir)) {
+        fs.rmSync(targetDir, { recursive: true, force: true })
       }
-    })
-    console.log('\n\n✓ All files extracted successfully.')
-  } catch (err) {
-    console.error(`\nError writing to destination: ${err.message}`)
-    if (isWin) {
-      console.log('\n[!] Tip: Installing to "C:\\Program Files" requires Administrator privileges.')
-      console.log('    Please restart your terminal/cmd as Administrator, or choose a user path.\n')
+      copyRecursiveSync(sourceAppDir, targetDir)
+      try { execSync(`xattr -cr "${targetDir}" 2>/dev/null || true`) } catch {}
+      console.log(`✓ Radiality copied to ${targetDir}`)
+    } else {
+      console.log('For macOS, please run ./macos/Radiality-Setup.command or ./macos/install-mac.sh')
     }
-    rl.close()
-    process.exit(1)
   }
 
   // POST-INSTALLATION OPTIONS
