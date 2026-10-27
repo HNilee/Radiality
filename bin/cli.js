@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+﻿#!/usr/bin/env node
 
 const fs = require('fs')
 const path = require('path')
@@ -236,7 +236,7 @@ async function main() {
 
     console.log(`Extracting and configuring Radiality into: ${targetDir}...`)
     try {
-      execSync(`"${setupExe}" /silent /dir="${targetDir}"`, { stdio: 'inherit' })
+      execSync(`powershell -NoProfile -ExecutionPolicy Bypass -Command "& '${setupExe.replace(/'/g, "''")}' /silent /dir='${targetDir.replace(/'/g, "''")}' /nodesktop"`, { stdio: 'inherit' })
       console.log('✓ Radiality files extracted and configured successfully.')
     } catch (installErr) {
       console.error(`Installation failed: ${installErr.message}`)
