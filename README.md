@@ -15,21 +15,46 @@ Traditional desktop interfaces often clutter workspaces with sprawling shortcuts
 
 ---
 
+## Repository Structure
+
+Platform installers are cleanly separated into dedicated folders:
+
+```text
+Radiality/
+├── windows/
+│   ├── Radiality-Setup.exe          # Standard Windows GUI Installer
+│   ├── Radiality-Uninstall.exe      # Standard Windows GUI Uninstaller
+│   ├── Start-Radiality.bat          # Portable Launcher
+│   ├── uninstall-windows.bat        # Batch Uninstaller Script
+│   └── build/                       # Windows C# Setup Source Files
+│
+├── macos/
+│   ├── Radiality-Setup.command      # macOS Double-Click Installer
+│   ├── Radiality-Uninstall.command  # macOS Double-Click Uninstaller
+│   ├── install-mac.sh               # macOS Installation Shell Script
+│   └── uninstall-mac.sh             # macOS Removal Shell Script
+│
+└── bin/
+    └── cli.js                       # Cross-Platform CLI Installer (npx radiality)
+```
+
+---
+
 ## Installation Guide
 
 Radiality offers four installation methods: two for Windows and two for macOS. You can choose between a standard graphical installer or a command-line interface (CLI) in your terminal.
 
 | Platform | Standard GUI Installer | Terminal / CLI Installer |
 | :--- | :--- | :--- |
-| **Windows** | `Radiality-Setup.exe` | `npx radiality` |
-| **macOS** | `Radiality-Setup.command` | `npx radiality` |
+| **Windows** | `windows/Radiality-Setup.exe` | `npx radiality` |
+| **macOS** | `macos/Radiality-Setup.command` | `npx radiality` |
 
 ---
 
 ### Windows Installation
 
 #### Method 1: Standard Setup Wizard (GUI)
-1. Double-click `Radiality-Setup.exe` in the root folder.
+1. Navigate to the `windows/` folder and double-click `Radiality-Setup.exe`.
 2. The Setup Wizard will guide you through:
    - Terms and license review.
    - Destination selection (defaults to `C:\Program Files\Radiality` with custom directory option).
@@ -56,7 +81,7 @@ The interactive CLI installer prompts you for:
 ### macOS Installation
 
 #### Method 1: Standard Launcher (Double-Click)
-1. In macOS Finder, double-click `Radiality-Setup.command`.
+1. In macOS Finder, navigate to the `macos/` folder and double-click `Radiality-Setup.command`.
 2. A terminal window will open and perform the installation automatically:
    - Verifies the Terms of Agreement.
    - Copies the application bundle to `/Applications/Radiality.app`.
@@ -79,11 +104,11 @@ The CLI steps match the Windows CLI experience, deploying natively to `/Applicat
 To completely remove Radiality and its associated shortcuts:
 
 ### Windows
-- **GUI:** Run `Radiality-Uninstall.exe` from the root folder or the installation directory, or uninstall via **Windows Settings > Installed apps**.
+- **GUI:** Run `windows/Radiality-Uninstall.exe` or uninstall via **Windows Settings > Installed apps**.
 - **CLI:** Run `npx radiality --uninstall`
 
 ### macOS
-- **GUI:** Double-click `Radiality-Uninstall.command` in the root folder.
+- **GUI:** Double-click `macos/Radiality-Uninstall.command`.
 - **CLI:** Run `npx radiality --uninstall`
 
 ---
@@ -119,8 +144,8 @@ To completely remove Radiality and its associated shortcuts:
 ### Setup
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/radiality.git
-cd radiality
+git clone https://github.com/HNilee/Radiality.git
+cd Radiality
 
 # Install dependencies
 npm install
