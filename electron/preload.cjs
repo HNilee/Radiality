@@ -14,6 +14,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setStartup: (enabled) => ipcRenderer.invoke('set-startup', enabled),
   hideWindow: () => ipcRenderer.send('hide-window'),
   closeApp: () => ipcRenderer.send('close-app'),
+  checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+  openExternalUrl: (url) => ipcRenderer.invoke('open-external-url', url),
+  onUpdateAvailable: (callback) => {
+    const handler = (_, info) => callback(info)
+    ipcRenderer.on('update-available', handler)
+    return () => ipcRenderer.removeListener('update-available', handler)
+  },
   onToggleMenu: (callback) => {
     const handler = (_, shouldOpen) => callback(shouldOpen)
     ipcRenderer.on('toggle-menu', handler)

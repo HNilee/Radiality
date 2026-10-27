@@ -1,0 +1,8 @@
+{
+  "latestVersion": "1.0.0",
+  "minRequiredVersion": "1.0.0",
+  "mandatory": true,
+  "title": "Radiality Update",
+  "releaseNotes": "Radiality v1.0.0 initial release with spring physics radial launcher, original icon extraction, and folder branching.",
+  "downloadUrl": "https://github.com/HNilee/Radiality/releases/latest"
+}

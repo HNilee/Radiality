@@ -713,6 +713,97 @@ ipcMain.on('close-app', () => {
   app.quit()
 })
 
+// ==========================================
+// AUTO-UPDATE & MANDATORY UPDATE SYSTEM
+// ==========================================
+const GITHUB_REPO = 'HNilee/Radiality'
+const CURRENT_VERSION = '1.0.0'
+
+function parseSemver(v) {
+  if (!v) return [0, 0, 0]
+  const clean = v.replace(/^v/i, '').trim()
+  const parts = clean.split('.').map((n) => parseInt(n, 10) || 0)
+  while (parts.length < 3) parts.push(0)
+  return parts
+}
+
+function isVersionGreater(v1, v2) {
+  const p1 = parseSemver(v1)
+  const p2 = parseSemver(v2)
+  for (let i = 0; i < 3; i++) {
+    if (p1[i] > p2[i]) return true
+    if (p1[i] < p2[i]) return false
+  }
+  return false
+}
+
+async function checkRemoteUpdate() {
+  const versionUrl = `https://raw.githubusercontent.com/${GITHUB_REPO}/main/version.json?t=${Date.now()}`
+  try {
+    const res = await fetch(versionUrl, {
+      headers: { 'User-Agent': 'Radiality-App' },
+      signal: AbortSignal.timeout(5000)
+    })
+    if (res.ok) {
+      const data = await res.json()
+      const latestVer = data.latestVersion || '1.0.0'
+      const minVer = data.minRequiredVersion || latestVer
+      const hasUpdate = isVersionGreater(latestVer, CURRENT_VERSION)
+      const mandatory = Boolean(data.mandatory || isVersionGreater(minVer, CURRENT_VERSION))
+      return {
+        hasUpdate,
+        mandatory: hasUpdate && mandatory,
+        currentVersion: CURRENT_VERSION,
+        latestVersion: latestVer,
+        title: data.title || `Radiality v${latestVer} Available`,
+        releaseNotes: data.releaseNotes || 'A new update is available.',
+        downloadUrl: data.downloadUrl || `https://github.com/${GITHUB_REPO}/releases/latest`
+      }
+    }
+  } catch (err) {
+    console.log('version.json fetch error, trying GitHub API fallback:', err.message)
+  }
+
+  // Fallback to GitHub Releases API
+  try {
+    const apiRes = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases/latest`, {
+      headers: { 'User-Agent': 'Radiality-App' },
+      signal: AbortSignal.timeout(5000)
+    })
+    if (apiRes.ok) {
+      const release = await apiRes.json()
+      const tagVer = (release.tag_name || '1.0.0').replace(/^v/i, '')
+      const hasUpdate = isVersionGreater(tagVer, CURRENT_VERSION)
+      return {
+        hasUpdate,
+        mandatory: hasUpdate,
+        currentVersion: CURRENT_VERSION,
+        latestVersion: tagVer,
+        title: release.name || `Radiality v${tagVer} Available`,
+        releaseNotes: release.body || 'A new release is available on GitHub.',
+        downloadUrl: release.html_url || `https://github.com/${GITHUB_REPO}/releases/latest`
+      }
+    }
+  } catch (apiErr) {
+    console.log('GitHub releases API error:', apiErr.message)
+  }
+
+  return {
+    hasUpdate: false,
+    currentVersion: CURRENT_VERSION
+  }
+}
+
+ipcMain.handle('check-for-updates', async () => {
+  return await checkRemoteUpdate()
+})
+
+ipcMain.handle('open-external-url', async (_, url) => {
+  if (url && (url.startsWith('https://') || url.startsWith('http://'))) {
+    shell.openExternal(url)
+  }
+})
+
 app.whenReady().then(() => {
   const cfg = loadConfig()
   currentHotkey = cfg.hotkey || 'Alt+Space'
@@ -720,6 +811,22 @@ app.whenReady().then(() => {
   createWindow()
   createTray()
   registerGlobalHotkey(currentHotkey)
+
+  // Background update check after startup
+  setTimeout(async () => {
+    try {
+      const updateInfo = await checkRemoteUpdate()
+      if (updateInfo.hasUpdate && mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('update-available', updateInfo)
+        if (updateInfo.mandatory) {
+          mainWindow.show()
+          mainWindow.focus()
+        }
+      }
+    } catch (e) {
+      // Ignore background check errors
+    }
+  }, 2000)
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

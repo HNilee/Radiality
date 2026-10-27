@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { RadialMenu } from './components/RadialMenu'
 import { SettingsModal } from './components/SettingsModal'
-import { AppConfig, MenuItem } from './types'
+import { UpdateModal } from './components/UpdateModal'
+import { AppConfig, MenuItem, UpdateInfo } from './types'
 import { FileCode, Folder, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -44,20 +45,37 @@ export const App: React.FC = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isPickTypeOpen, setIsPickTypeOpen] = useState(false)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null)
 
   const showToast = (msg: string) => {
     setToastMessage(msg)
     setTimeout(() => setToastMessage(null), 2500)
   }
 
-  // Load configuration from Electron main process
+  // Load configuration & check updates
   useEffect(() => {
     if (window.electronAPI) {
       window.electronAPI.getConfig().then((cfg) => {
         if (cfg) setConfig(cfg)
       })
 
+      // Check for updates
+      window.electronAPI.checkForUpdates?.().then((info) => {
+        if (info && info.hasUpdate) {
+          setUpdateInfo(info)
+        }
+      })
+
+      const unsubscribeUpdate = window.electronAPI.onUpdateAvailable?.((info) => {
+        if (info && info.hasUpdate) {
+          setUpdateInfo(info)
+        }
+      })
+
       const unsubscribeToggle = window.electronAPI.onToggleMenu((shouldOpen) => {
+        if (updateInfo?.hasUpdate && updateInfo?.mandatory) {
+          return // Prevent opening menu if mandatory update is active
+        }
         if (typeof shouldOpen === 'boolean') {
           setIsOpen(shouldOpen)
         } else {
@@ -67,13 +85,17 @@ export const App: React.FC = () => {
 
       return () => {
         if (unsubscribeToggle) unsubscribeToggle()
+        if (unsubscribeUpdate) unsubscribeUpdate()
       }
     }
-  }, [isSettingsOpen, isPickTypeOpen])
+  }, [isSettingsOpen, isPickTypeOpen, updateInfo])
 
   // Keyboard shortcut for Escape key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (updateInfo?.hasUpdate && updateInfo?.mandatory) {
+        return // Block escape dismiss on mandatory update
+      }
       if (e.key === 'Escape') {
         if (isPickTypeOpen) {
           setIsPickTypeOpen(false)
@@ -87,7 +109,7 @@ export const App: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, isSettingsOpen, isPickTypeOpen])
+  }, [isOpen, isSettingsOpen, isPickTypeOpen, updateInfo])
 
   const handleCloseMenu = () => {
     setIsOpen(false)
@@ -285,10 +307,21 @@ export const App: React.FC = () => {
 
       {/* Settings Modal */}
       <SettingsModal
-        isOpen={isSettingsOpen}
+        isOpen={isSettingsOpen && (!updateInfo || !updateInfo.mandatory)}
         config={config}
         onClose={() => setIsSettingsOpen(false)}
         onSaveConfig={handleSaveConfig}
+        onShowUpdateModal={(info) => setUpdateInfo(info)}
+      />
+
+      {/* Mandatory / Optional Update Modal */}
+      <UpdateModal
+        updateInfo={updateInfo}
+        onDismiss={() => {
+          if (!updateInfo?.mandatory) {
+            setUpdateInfo(null)
+          }
+        }}
       />
     </div>
   )

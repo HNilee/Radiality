@@ -15,9 +15,10 @@ import {
   ChevronDown,
   Sparkles,
   Lock,
-  Palette
+  Palette,
+  RefreshCw
 } from 'lucide-react'
-import { AppConfig, MenuItem } from '../types'
+import { AppConfig, MenuItem, UpdateInfo } from '../types'
 import { DynamicIcon, IconPicker, ColorPicker } from './IconPicker'
 
 const MAX_SHORTCUTS = 8
@@ -27,6 +28,7 @@ interface SettingsModalProps {
   config: AppConfig
   onClose: () => void
   onSaveConfig: (newConfig: AppConfig) => void
+  onShowUpdateModal?: (info: UpdateInfo) => void
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -34,6 +36,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   config,
   onClose,
   onSaveConfig,
+  onShowUpdateModal,
 }) => {
   const [localConfig, setLocalConfig] = useState<AppConfig>(config)
   const [isRecordingKeybind, setIsRecordingKeybind] = useState(false)
@@ -42,6 +45,30 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [editingIconIndex, setEditingIconIndex] = useState<number | null>(null)
   const [editingColorIndex, setEditingColorIndex] = useState<number | null>(null)
   const [launchAtStartup, setLaunchAtStartup] = useState<boolean>(false)
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false)
+  const [updateCheckStatus, setUpdateCheckStatus] = useState<string | null>(null)
+
+  const handleCheckUpdates = async () => {
+    if (!window.electronAPI?.checkForUpdates) return
+    setIsCheckingUpdate(true)
+    setUpdateCheckStatus(null)
+    try {
+      const info = await window.electronAPI.checkForUpdates()
+      if (info && info.hasUpdate) {
+        if (onShowUpdateModal) {
+          onShowUpdateModal(info)
+        }
+      } else {
+        setUpdateCheckStatus('You are using the latest version (v1.0.0)')
+        setTimeout(() => setUpdateCheckStatus(null), 3500)
+      }
+    } catch (err) {
+      setUpdateCheckStatus('Could not check updates')
+      setTimeout(() => setUpdateCheckStatus(null), 3500)
+    } finally {
+      setIsCheckingUpdate(false)
+    }
+  }
 
   useEffect(() => {
     setLocalConfig(config)
@@ -446,6 +473,33 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         className="w-[22px] h-[22px] rounded-full bg-white shadow-[0_2px_4px_rgba(0,0,0,0.25)]"
                       />
                     </button>
+                  </div>
+
+                  {/* Row C: Check for Updates */}
+                  <div className="px-4 py-3.5 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-blue-500/15 border border-blue-400/20 text-blue-300 flex items-center justify-center shrink-0">
+                        <Sparkles size={16} />
+                      </div>
+                      <div>
+                        <span className="text-[13px] font-medium text-white block">Software Updates</span>
+                        <span className="text-[11px] text-zinc-400">
+                          {updateCheckStatus || 'Radiality v1.0.0 (Latest)'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <motion.button
+                      type="button"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.97 }}
+                      disabled={isCheckingUpdate}
+                      onClick={handleCheckUpdates}
+                      className="h-8 px-3 rounded-xl border border-white/[0.12] bg-white/[0.06] hover:bg-white/[0.1] text-xs font-medium text-zinc-200 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                    >
+                      <RefreshCw size={12} className={isCheckingUpdate ? 'animate-spin' : ''} />
+                      <span>{isCheckingUpdate ? 'Checking...' : 'Check for Updates'}</span>
+                    </motion.button>
                   </div>
                 </div>
               </div>

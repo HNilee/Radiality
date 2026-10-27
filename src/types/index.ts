@@ -23,6 +23,17 @@ export interface AppConfig {
   items: MenuItem[]
 }
 
+export interface UpdateInfo {
+  hasUpdate: boolean
+  mandatory?: boolean
+  currentVersion: string
+  latestVersion?: string
+  title?: string
+  releaseNotes?: string
+  downloadUrl?: string
+  offline?: boolean
+}
+
 export interface ElectronAPI {
   getConfig: () => Promise<AppConfig>
   saveConfig: (config: AppConfig) => Promise<boolean>
@@ -37,6 +48,9 @@ export interface ElectronAPI {
   setStartup: (enabled: boolean) => Promise<boolean>
   hideWindow: () => void
   closeApp: () => void
+  checkForUpdates: () => Promise<UpdateInfo>
+  openExternalUrl: (url: string) => Promise<void>
+  onUpdateAvailable: (callback: (info: UpdateInfo) => void) => () => void
   onToggleMenu: (callback: (shouldOpen?: boolean) => void) => () => void
   onCloseIfIdle: (callback: () => void) => () => void
 }
