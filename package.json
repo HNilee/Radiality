@@ -8,9 +8,7 @@
     "url": "https://github.com/HNilee/Radiality.git"
   },
   "homepage": "https://github.com/HNilee/Radiality",
-  "bin": {
-    "radiality": "./bin/cli.js"
-  },
+  "bin": "./bin/cli.js",
   "author": "Antigravity",
   "scripts": {
     "dev": "vite",

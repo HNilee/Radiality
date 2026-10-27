@@ -1,0 +1,7 @@
+# Exclude heavy binaries from NPM tarball (Users download via CLI/GitHub)
+windows/*.exe
+release/
+dist/
+node_modules/
+.git/
+.github/
