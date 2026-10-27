@@ -10,19 +10,23 @@ interface UpdateModalProps {
 
 export const UpdateModal: React.FC<UpdateModalProps> = ({ updateInfo, onDismiss }) => {
   const [copiedCli, setCopiedCli] = useState(false)
+  const [isOpeningTerminal, setIsOpeningTerminal] = useState(false)
 
   if (!updateInfo || !updateInfo.hasUpdate) return null
 
   const isMandatory = Boolean(updateInfo.mandatory)
 
-  const handleUpdateClick = () => {
-    if (updateInfo.downloadUrl && window.electronAPI?.openExternalUrl) {
+  const handleUpdateClick = async () => {
+    setIsOpeningTerminal(true)
+    if (window.electronAPI?.runTerminalUpdate) {
+      await window.electronAPI.runTerminalUpdate()
+    } else if (updateInfo.downloadUrl && window.electronAPI?.openExternalUrl) {
       window.electronAPI.openExternalUrl(updateInfo.downloadUrl)
     }
   }
 
   const handleCopyCli = () => {
-    navigator.clipboard.writeText('npx radiality')
+    navigator.clipboard.writeText('npx radiality@latest')
     setCopiedCli(true)
     setTimeout(() => setCopiedCli(false), 2000)
   }
@@ -108,9 +112,9 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({ updateInfo, onDismiss 
           <div className="mt-3.5 flex items-center justify-between p-2.5 rounded-xl bg-white/[0.04] border border-white/[0.06] text-[12px]">
             <div className="flex items-center gap-2 text-zinc-400">
               <Terminal size={14} className="text-zinc-400" />
-              <span>Or update in terminal:</span>
+              <span>Or run manual update:</span>
               <code className="text-indigo-300 bg-white/[0.06] px-1.5 py-0.5 rounded font-mono">
-                npx radiality
+                npx radiality@latest
               </code>
             </div>
             <button
@@ -149,11 +153,11 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({ updateInfo, onDismiss 
 
             <button
               onClick={handleUpdateClick}
-              className="px-5 py-2.5 rounded-xl text-[13px] font-semibold text-white bg-blue-600 hover:bg-blue-500 shadow-lg shadow-blue-600/30 flex items-center gap-2 transition-all active:scale-[0.98]"
+              disabled={isOpeningTerminal}
+              className="px-5 py-2.5 rounded-xl text-[13px] font-semibold text-white bg-blue-600 hover:bg-blue-500 shadow-lg shadow-blue-600/30 flex items-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50"
             >
-              <Download size={15} />
-              Update Now
-              <ExternalLink size={12} className="opacity-70" />
+              <Terminal size={15} />
+              {isOpeningTerminal ? 'Launching Terminal...' : 'Update Now'}
             </button>
           </div>
         </motion.div>

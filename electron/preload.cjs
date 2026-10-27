@@ -16,6 +16,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   closeApp: () => ipcRenderer.send('close-app'),
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
   openExternalUrl: (url) => ipcRenderer.invoke('open-external-url', url),
+  runTerminalUpdate: () => ipcRenderer.invoke('run-terminal-update'),
   onUpdateAvailable: (callback) => {
     const handler = (_, info) => callback(info)
     ipcRenderer.on('update-available', handler)

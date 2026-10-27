@@ -50,6 +50,7 @@ export interface ElectronAPI {
   closeApp: () => void
   checkForUpdates: () => Promise<UpdateInfo>
   openExternalUrl: (url: string) => Promise<void>
+  runTerminalUpdate: () => Promise<{ success: boolean; error?: string }>
   onUpdateAvailable: (callback: (info: UpdateInfo) => void) => () => void
   onToggleMenu: (callback: (shouldOpen?: boolean) => void) => () => void
   onCloseIfIdle: (callback: () => void) => () => void

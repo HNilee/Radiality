@@ -804,6 +804,36 @@ ipcMain.handle('open-external-url', async (_, url) => {
   }
 })
 
+ipcMain.handle('run-terminal-update', async () => {
+  try {
+    if (isWin) {
+      // Spawn PowerShell in a new visible window running npx radiality@latest
+      spawn('cmd.exe', ['/c', 'start', 'powershell', '-NoExit', '-Command', 'Write-Host "Launching Radiality Updater..." -ForegroundColor Cyan; npx radiality@latest'], {
+        detached: true,
+        stdio: 'ignore'
+      }).unref()
+    } else if (isMac) {
+      // Spawn macOS Terminal.app running npx radiality@latest
+      const script = 'tell application "Terminal" to do script "npx radiality@latest"'
+      spawn('osascript', ['-e', script, '-e', 'tell application "Terminal" to activate'], {
+        detached: true,
+        stdio: 'ignore'
+      }).unref()
+    }
+
+    // Gracefully quit this instance after 1.2s to unlock files for replacement
+    setTimeout(() => {
+      app.isQuitting = true
+      app.quit()
+    }, 1200)
+
+    return { success: true }
+  } catch (err) {
+    console.error('Failed to launch terminal updater:', err)
+    return { success: false, error: err.message }
+  }
+})
+
 app.whenReady().then(() => {
   const cfg = loadConfig()
   currentHotkey = cfg.hotkey || 'Alt+Space'
