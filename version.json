@@ -1,8 +1,8 @@
 {
-  "latestVersion": "1.0.6",
-  "minRequiredVersion": "1.0.6",
+  "latestVersion": "1.0.7",
+  "minRequiredVersion": "1.0.7",
   "mandatory": true,
-  "title": "Radiality v1.0.6 Update",
-  "releaseNotes": "Radiality v1.0.6: One-click terminal auto-launch updater with npx radiality@latest, seamless in-place installation, and cross-platform enhancements.",
+  "title": "Radiality v1.0.7 Update",
+  "releaseNotes": "Radiality v1.0.7: Resolved Windows temporary file handle lock on download & direct spawn installer execution.",
   "downloadUrl": "https://github.com/HNilee/Radiality"
 }

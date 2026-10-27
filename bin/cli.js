@@ -3,7 +3,7 @@
 const fs = require('fs')
 const path = require('path')
 const os = require('os')
-const { spawn, execSync } = require('child_process')
+const { spawn, spawnSync, execSync } = require('child_process')
 const readline = require('readline')
 
 const isWin = process.platform === 'win32'
@@ -47,17 +47,34 @@ async function downloadFileWithProgress(url, destPath) {
   const total = parseInt(res.headers.get('content-length') || '0', 10)
   const fileStream = fs.createWriteStream(destPath)
   let downloaded = 0
-  for await (const chunk of res.body) {
-    downloaded += chunk.length
-    fileStream.write(chunk)
-    if (total > 0) {
-      process.stdout.write(`\rDownloading package: ${renderProgressBar(downloaded, total)} ${(downloaded / 1048576).toFixed(1)}MB / ${(total / 1048576).toFixed(1)}MB`)
-    } else {
-      process.stdout.write(`\rDownloading package: ${(downloaded / 1048576).toFixed(1)}MB`)
-    }
-  }
-  fileStream.end()
+
+  await new Promise((resolve, reject) => {
+    fileStream.on('error', reject)
+    fileStream.on('finish', resolve)
+
+    ;(async () => {
+      try {
+        for await (const chunk of res.body) {
+          downloaded += chunk.length
+          if (!fileStream.write(chunk)) {
+            await new Promise((r) => fileStream.once('drain', r))
+          }
+          if (total > 0) {
+            process.stdout.write(`\rDownloading package: ${renderProgressBar(downloaded, total)} ${(downloaded / 1048576).toFixed(1)}MB / ${(total / 1048576).toFixed(1)}MB`)
+          } else {
+            process.stdout.write(`\rDownloading package: ${(downloaded / 1048576).toFixed(1)}MB`)
+          }
+        }
+        fileStream.end()
+      } catch (err) {
+        fileStream.destroy(err)
+        reject(err)
+      }
+    })()
+  })
+
   process.stdout.write('\n')
+  await new Promise((r) => setTimeout(r, 800))
 }
 
 function copyRecursiveSync(src, dest, onFile) {
@@ -220,13 +237,15 @@ async function main() {
       path.join(process.cwd(), 'Radiality-Setup.exe')
     ].find((p) => fs.existsSync(p))
 
+    let isTempExe = false
     if (!setupExe) {
-      const tempExe = path.join(os.tmpdir(), 'Radiality-Setup.exe')
+      const tempExe = path.join(os.tmpdir(), `Radiality-Setup-${Date.now()}-${Math.floor(Math.random() * 10000)}.exe`)
       const dlUrl = 'https://github.com/HNilee/Radiality/raw/main/windows/Radiality-Setup.exe'
       console.log('Fetching standalone pre-built Radiality package from GitHub...')
       try {
         await downloadFileWithProgress(dlUrl, tempExe)
         setupExe = tempExe
+        isTempExe = true
       } catch (dlErr) {
         console.error(`Download failed: ${dlErr.message}`)
         rl.close()
@@ -236,7 +255,12 @@ async function main() {
 
     console.log(`Extracting and configuring Radiality into: ${targetDir}...`)
     try {
-      execSync(`powershell -NoProfile -ExecutionPolicy Bypass -Command "& '${setupExe.replace(/'/g, "''")}' /silent /dir='${targetDir.replace(/'/g, "''")}' /nodesktop"`, { stdio: 'inherit' })
+      const res = spawnSync(setupExe, ['/silent', `/dir=${targetDir}`, '/nodesktop'], {
+        stdio: 'inherit',
+        windowsHide: false
+      })
+      if (res.error) throw res.error
+      if (res.status !== 0) throw new Error(`Installer exited with code ${res.status}`)
       console.log('✓ Radiality files extracted and configured successfully.')
     } catch (installErr) {
       console.error(`Installation failed: ${installErr.message}`)
@@ -246,6 +270,10 @@ async function main() {
       }
       rl.close()
       process.exit(1)
+    } finally {
+      if (isTempExe && fs.existsSync(setupExe)) {
+        try { fs.unlinkSync(setupExe) } catch {}
+      }
     }
   } else if (isMac) {
     let sourceAppDir = path.join(rootDir, 'release', 'mac', 'Radiality.app')
