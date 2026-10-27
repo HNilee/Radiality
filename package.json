@@ -1,6 +1,6 @@
 {
   "name": "radiality",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Radiality - Elegant, Customizable Radial Menu Toolbar for Windows & macOS",
   "main": "electron/main.cjs",
   "repository": {
