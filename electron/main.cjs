@@ -23,6 +23,7 @@ function getConfigPath() {
 }
 
 const isMac = process.platform === 'darwin'
+const isWin = process.platform === 'win32'
 
 const DEFAULT_CONFIG = {
   hotkey: isMac ? 'Alt+Space' : 'Alt+Space',
@@ -717,7 +718,7 @@ ipcMain.on('close-app', () => {
 // AUTO-UPDATE & MANDATORY UPDATE SYSTEM
 // ==========================================
 const GITHUB_REPO = 'HNilee/Radiality'
-let CURRENT_VERSION = '1.0.7'
+let CURRENT_VERSION = '1.0.9'
 try {
   CURRENT_VERSION = require('../package.json').version || '1.0.7'
 } catch (e) {}

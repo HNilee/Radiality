@@ -1,8 +1,8 @@
 {
-  "latestVersion": "1.0.8",
-  "minRequiredVersion": "1.0.8",
+  "latestVersion": "1.0.9",
+  "minRequiredVersion": "1.0.9",
   "mandatory": true,
-  "title": "Radiality v1.0.8 Update",
-  "releaseNotes": "Radiality v1.0.8: Auto-terminate running instances prior to extraction, fix path normalization, and ensure reliable in-place upgrades.",
+  "title": "Radiality v1.0.9 Update",
+  "releaseNotes": "Radiality v1.0.9: Fixed isWin variable scope for one-click terminal auto-update launcher.",
   "downloadUrl": "https://github.com/HNilee/Radiality"
 }
